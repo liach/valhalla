@@ -518,7 +518,6 @@ bool LibraryCallKit::try_to_inline(int predicate) {
 
   case vmIntrinsics::_allocateUninitializedArray: return inline_unsafe_newArray(true);
   case vmIntrinsics::_newArray:                   return inline_unsafe_newArray(false);
-  case vmIntrinsics::_newNullRestrictedArray:   return inline_newNullRestrictedArray();
 
   case vmIntrinsics::_isAssignableFrom:         return inline_native_subtype_check();
 
@@ -4517,33 +4516,6 @@ Node* LibraryCallKit::generate_array_guard_common(Node* kls, RegionNode* region,
     }
   }
   return ctrl;
-}
-
-//-----------------------inline_newNullRestrictedArray--------------------------
-// public static native Object[] newNullRestrictedArray(Class<?> componentType, int length);
-bool LibraryCallKit::inline_newNullRestrictedArray() {
-  Node* componentType = argument(0);
-  Node* length = argument(1);
-
-  const TypeInstPtr* tp = _gvn.type(componentType)->isa_instptr();
-  if (tp != nullptr) {
-    ciInstanceKlass* ik = tp->instance_klass();
-    if (ik == C->env()->Class_klass()) {
-      ciType* t = tp->java_mirror_type();
-      if (t != nullptr && t->is_inlinetype()) {
-        ciArrayKlass* array_klass = ciArrayKlass::make(t, true);
-        if (array_klass->is_loaded() && array_klass->element_klass()->as_inline_klass()->is_initialized()) {
-          const TypeAryKlassPtr* array_klass_type = TypeKlassPtr::make(array_klass, Type::trust_interfaces)->is_aryklassptr();
-          array_klass_type = array_klass_type->cast_to_null_free();
-          Node* obj = new_array(makecon(array_klass_type), length, 0, nullptr, false);  // no arguments to push
-          set_result(obj);
-          assert(gvn().type(obj)->is_aryptr()->is_null_free(), "must be null-free");
-          return true;
-        }
-      }
-    }
-  }
-  return false;
 }
 
 //-----------------------inline_native_newArray--------------------------

@@ -34,31 +34,31 @@ Java_jdk_internal_value_ValueClass_isImplicitlyConstructible(JNIEnv *env, jclass
 }
 
 JNIEXPORT jarray JNICALL
-Java_jdk_internal_value_ValueClass_newNullRestrictedArray(JNIEnv *env, jclass cls, jclass elmClass, jint len)
+Java_jdk_internal_value_ValueClass_newNullRestrictedArray0(JNIEnv *env, jclass cls, jclass elmClass, jint len)
 {
     return JVM_NewNullRestrictedArray(env, elmClass, len);
 }
 
 JNIEXPORT jarray JNICALL
-Java_jdk_internal_value_ValueClass_newNullRestrictedAtomicArray(JNIEnv *env, jclass cls, jclass elmClass, jint len)
+Java_jdk_internal_value_ValueClass_newNullRestrictedAtomicArray0(JNIEnv *env, jclass cls, jclass elmClass, jint len)
 {
     return JVM_NewNullRestrictedAtomicArray(env, elmClass, len);
 }
 
 JNIEXPORT jarray JNICALL
-Java_jdk_internal_value_ValueClass_newNullableAtomicArray(JNIEnv *env, jclass cls, jclass elmClass, jint len)
+Java_jdk_internal_value_ValueClass_newNullableAtomicArray0(JNIEnv *env, jclass cls, jclass elmClass, jint len)
 {
     return JVM_NewNullableAtomicArray(env, elmClass, len);
 }
 
 JNIEXPORT jboolean JNICALL
-Java_jdk_internal_value_ValueClass_isFlatArray(JNIEnv *env, jclass cls, jobject obj)
+Java_jdk_internal_value_ValueClass_isFlatArray0(JNIEnv *env, jclass cls, jobject obj)
 {
     return JVM_IsFlatArray(env, obj);
 }
 
 JNIEXPORT jboolean JNICALL
-Java_jdk_internal_value_ValueClass_isNullRestrictedArray(JNIEnv *env, jclass cls, jobject obj)
+Java_jdk_internal_value_ValueClass_isNullRestrictedArray0(JNIEnv *env, jclass cls, jobject obj)
 {
     return JVM_IsNullRestrictedArray(env, obj);
 }

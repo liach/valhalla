@@ -28,21 +28,25 @@ package jdk.internal.value;
 import jdk.internal.access.JavaLangReflectAccess;
 import jdk.internal.access.SharedSecrets;
 import jdk.internal.misc.Unsafe;
-import jdk.internal.vm.annotation.IntrinsicCandidate;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.UndeclaredThrowableException;
 
 /**
  * Utilities to access
  */
-public class ValueClass {
+public final class ValueClass {
     private static final Unsafe UNSAFE = Unsafe.getUnsafe();
     private static final JavaLangReflectAccess JLRA = SharedSecrets.getJavaLangReflectAccess();
 
     /**
      * {@return true if the given {@code Class} object is implicitly constructible}
      */
+    @Deprecated(forRemoval = true, since = "Valhalla")
     public static native boolean isImplicitlyConstructible(Class<?> cls);
 
     /**
@@ -84,6 +88,44 @@ public class ValueClass {
         }
     }
 
+    // Temporary gap, to be removed when we have robust array construction
+    private static final ClassValue<MethodHandle> DEFAULT_CONSTRUCTORS = new ClassValue<>() {
+        @Override
+        protected MethodHandle computeValue(Class<?> type) {
+            MethodHandle mh;
+            try {
+                mh = SharedSecrets.getJavaLangInvokeAccess().findConstructor(type, MethodType.methodType(void.class));
+            } catch (ReflectiveOperationException ex) {
+                throw new IllegalArgumentException(ex);
+            }
+            if (mh == null)
+                throw new IllegalArgumentException("No default constructor");
+            return mh.asType(MethodType.genericMethodType(0));
+        }
+    };
+
+    private static <T> T[] fillInArray(Object[] a, MethodHandle ctor) {
+        for (int i = 0; i < a.length; i++) {
+            try {
+                a[i] = ctor.invokeExact();
+            } catch (Throwable ex) {
+                if (ex instanceof Error e) {
+                    throw e;
+                } else if (ex instanceof RuntimeException e) {
+                    throw e;
+                } else {
+                    throw new UndeclaredThrowableException(ex);
+                }
+            }
+        }
+
+        UNSAFE.storeStoreFence(); // Final semantics?
+
+        @SuppressWarnings("unchecked")
+        T[] ret = (T[]) a;
+        return ret;
+    }
+
     /**
      * Allocate an array of a value class type with components that behave in
      * the same way as a {@link jdk.internal.vm.annotation.NullRestricted}
@@ -93,24 +135,57 @@ public class ValueClass {
      * this method should only be used by internal JDK code for experimental
      * purposes and should not affect user-observable outcomes.
      *
-     * @throws IllegalArgumentException if {@code componentType} is not a
-     *         value class type or is not annotated with
-     *         {@link jdk.internal.vm.annotation.ImplicitlyConstructible}
+     * @throws IllegalArgumentException if {@code componentType} does not have
+     *         an accessible nullary constructor
      */
-    @IntrinsicCandidate
-    public static native Object[] newNullRestrictedArray(Class<?> componentType,
-                                                         int length);
+    public static <T> T[] newNullRestrictedArray(Class<T> componentType,
+                                                 int length) {
+        var ctor = DEFAULT_CONSTRUCTORS.get(componentType); // throw IAE early
+        Object[] array = newNullRestrictedArray0(componentType, length);
+        return fillInArray(array, ctor);
+    }
 
-    public static native Object[] newNullRestrictedAtomicArray(Class<?> componentType,
-                                                         int length);
+    private static native Object[] newNullRestrictedArray0(Class<?> componentType,
+                                                           int length);
 
-    public static native Object[] newNullableAtomicArray(Class<?> componentType,
-                                                         int length);
+    public static <T> T[] newNullRestrictedAtomicArray(Class<?> componentType,
+                                                       int length) {
+        var ctor = DEFAULT_CONSTRUCTORS.get(componentType); // throw IAE early
+        Object[] array = newNullableAtomicArray0(componentType, length);
+        return fillInArray(array, ctor);
+    }
 
-    public static native boolean isFlatArray(Object array);
+    private static native Object[] newNullRestrictedAtomicArray0(Class<?> componentType,
+                                                                 int length);
+
+    public static <T> T[] newNullableAtomicArray(Class<?> componentType,
+                                                 int length) {
+        // Default 0s from VM is fine
+        @SuppressWarnings("unchecked")
+        var ret = (T[]) newNullableAtomicArray0(componentType, length);
+        return ret;
+    }
+
+    private static native Object[] newNullableAtomicArray0(Class<?> componentType,
+                                                           int length);
+
+    public static boolean isFlatArray(Object array) {
+        // implicit null check
+        var cl = array.getClass();
+        return cl.isArray() && UNSAFE.isFlatArray(cl);
+    }
+
+    // TODO remove this
+    private static native boolean isFlatArray0(Object array);
 
     /**
      * {@return true if the given array is a null-restricted array}
      */
-    public static native boolean isNullRestrictedArray(Object array);
+    public static boolean isNullRestrictedArray(Object array) {
+        // implicit null check
+        return array.getClass().isArray() && isNullRestrictedArray0(array);
+    }
+
+    // TODO investigate move this to Unsafe?
+    private static native boolean isNullRestrictedArray0(Object array);
 }
