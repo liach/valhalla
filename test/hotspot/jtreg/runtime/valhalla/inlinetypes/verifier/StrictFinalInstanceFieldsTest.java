@@ -25,11 +25,11 @@
  * @test
  * @enablePreview
  * @library /test/lib
- * @run main/othervm jdk.test.lib.StrictTransformer StrictFinalInstanceFieldsTest.java
+ * @run main/othervm jdk.test.lib.value.StrictCompiler StrictFinalInstanceFieldsTest.java
  * @run main/othervm -Xlog:verification StrictFinalInstanceFieldsTest
  */
 
-import jdk.internal.vm.annotation.Strict;
+import jdk.test.lib.value.Strict;
 
 public class StrictFinalInstanceFieldsTest {
     public static void main(String[] args) {

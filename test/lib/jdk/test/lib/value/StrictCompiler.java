@@ -21,7 +21,7 @@
  * questions.
  */
 
-package jdk.test.lib;
+package jdk.test.lib.value;
 
 import java.io.IOException;
 import java.lang.classfile.*;
@@ -29,6 +29,9 @@ import java.lang.classfile.attribute.RuntimeVisibleAnnotationsAttribute;
 import java.lang.constant.ClassDesc;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import jdk.test.lib.compiler.InMemoryJavaCompiler;
@@ -39,20 +42,20 @@ import static java.lang.classfile.ClassFile.ACC_STRICT;
  * Compile a java file with InMemoryJavaCompiler, and then modify the resulting
  * class file to include strict modifier and null restriction attributes.
  */
-public class StrictTransformer {
+public final class StrictCompiler {
     public static final String TEST_SRC = System.getProperty("test.src", "").trim();
     public static final String TEST_CLASSES = System.getProperty("test.classes", "").trim();
-    private static final ClassDesc CD_Strict = ClassDesc.of("jdk.internal.vm.annotation.Strict");
-    private static final ClassDesc CD_NullRestricted = ClassDesc.of("jdk.internal.vm.annotation.NullRestricted");
+    private static final ClassDesc CD_Strict = ClassDesc.of("jdk.test.lib.value.Strict");
+    private static final ClassDesc CD_NullRestricted = ClassDesc.of("jdk.test.lib.value.NullRestricted");
 
-    static final class NullRestrictedAttribute extends CustomAttribute<NullRestrictedAttribute> {
-        static final NullRestrictedAttribute INSTANCE = new NullRestrictedAttribute();
+    public static final class NullRestrictedAttribute extends CustomAttribute<NullRestrictedAttribute> {
+        public static final NullRestrictedAttribute INSTANCE = new NullRestrictedAttribute();
         private enum Mapper implements AttributeMapper<NullRestrictedAttribute> {
             NullRestricted; // overrides name()
 
             @Override
             public NullRestrictedAttribute readAttribute(AttributedElement enclosing, ClassReader cf, int pos) {
-                throw new UnsupportedOperationException();
+                return NullRestrictedAttribute.INSTANCE;
             }
 
             @Override
@@ -77,20 +80,25 @@ public class StrictTransformer {
      * @throws IOException if an I/O error occurs
      */
     public static void main(String[] args) throws IOException {
-        String fileName;
-        if (args.length != 1 || !(fileName = args[0]).endsWith(".java")) {
-            throw new IllegalArgumentException("Unexpected number of arguments for file copy");
+        Map<String, String> ins = new HashMap<>();
+        List<String> opts = new ArrayList<>();
+        for (var a : args) {
+            if (a.endsWith(".java")) {
+                String className = a.substring(0, a.length() - 5);
+                Path src = Path.of(TEST_SRC, a);
+                ins.put(className, Files.readString(src));
+            } else {
+                opts.add(a);
+            }
         }
-        Path src = Path.of(TEST_SRC, fileName);
-        if (!Files.exists(src)) {
-            throw new IOException("Can't find source " + src.toAbsolutePath().normalize());
+        if (!opts.contains("--source")) {
+            opts.add("--source");
+            opts.add(String.valueOf(Runtime.version().feature()));
         }
-        String className = fileName.substring(0, fileName.length() - 5);
-        var release = Runtime.version().feature();
-        var classes = InMemoryJavaCompiler.compile(Map.of(className, Files.readString(src)),
-                "--source", String.valueOf(release),
-                "--enable-preview",
-                "--add-exports=java.base/jdk.internal.vm.annotation=ALL-UNNAMED");
+        if (!opts.contains("--enable-preview")) {
+            opts.add("--enable-preview");
+        }
+        var classes = InMemoryJavaCompiler.compile(ins, opts.toArray(String[]::new));
         Files.createDirectories(Path.of(TEST_CLASSES));
         for (var entry : classes.entrySet()) {
             dumpClass(entry.getKey(), entry.getValue());
@@ -130,6 +138,7 @@ public class StrictTransformer {
                 }
                 builder.withFlags(oldAccessFlags);
                 if (nullRestricted) {
+                    assert strict : name;
                     builder.with(NullRestrictedAttribute.INSTANCE);
                 }
             }
