@@ -30,32 +30,18 @@
  * @run junit StrictCompilerTest
  */
 
-import java.lang.classfile.ClassFile;
-
-import jdk.test.lib.value.NullRestricted;
 import jdk.test.lib.value.Strict;
-import jdk.test.lib.value.StrictCompiler;
 import org.junit.jupiter.api.Test;
 
 import static java.lang.classfile.ClassFile.ACC_FINAL;
 import static java.lang.classfile.ClassFile.ACC_STRICT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class StrictCompilerTest {
     @Test
     void testReflectMyself() throws Throwable {
         for (var field : One.class.getDeclaredFields()) {
             assertEquals(ACC_STRICT | ACC_FINAL, field.getModifiers(), () -> field.getName());
-        }
-        try (var stream = StrictCompilerTest.class.getResourceAsStream("/One.class")) {
-            var cm = ClassFile.of(ClassFile.AttributeMapperOption.of(utf8 -> {
-                if (utf8.equalsString("NullRestricted"))
-                    return StrictCompiler.NullRestrictedAttribute.INSTANCE.attributeMapper();
-                return null;
-            })).parse(stream.readAllBytes());
-            var fm = cm.fields().stream().filter(f -> f.fieldName().equalsString("b")).findFirst().orElseThrow();
-            assertNotNull(fm.findAttribute(StrictCompiler.NullRestrictedAttribute.INSTANCE.attributeMapper()).orElseThrow());
         }
     }
 }
@@ -64,7 +50,6 @@ class One {
     @Strict
     final int a;
     @Strict
-    @NullRestricted
     final Object b;
 
     One() {

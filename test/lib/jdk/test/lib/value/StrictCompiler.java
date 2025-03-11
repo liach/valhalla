@@ -46,34 +46,8 @@ public final class StrictCompiler {
     public static final String TEST_SRC = System.getProperty("test.src", "").trim();
     public static final String TEST_CLASSES = System.getProperty("test.classes", "").trim();
     private static final ClassDesc CD_Strict = ClassDesc.of("jdk.test.lib.value.Strict");
-    private static final ClassDesc CD_NullRestricted = ClassDesc.of("jdk.test.lib.value.NullRestricted");
-
-    public static final class NullRestrictedAttribute extends CustomAttribute<NullRestrictedAttribute> {
-        public static final NullRestrictedAttribute INSTANCE = new NullRestrictedAttribute();
-        private enum Mapper implements AttributeMapper<NullRestrictedAttribute> {
-            NullRestricted; // overrides name()
-
-            @Override
-            public NullRestrictedAttribute readAttribute(AttributedElement enclosing, ClassReader cf, int pos) {
-                return NullRestrictedAttribute.INSTANCE;
-            }
-
-            @Override
-            public void writeAttribute(BufWriter buf, NullRestrictedAttribute attr) {
-                buf.writeIndex(attr.attributeName());
-                buf.writeInt(0);
-            }
-
-            @Override
-            public AttributeStability stability() {
-                return AttributeStability.STATELESS;
-            }
-        }
-
-        private NullRestrictedAttribute() {
-            super(Mapper.NullRestricted);
-        }
-    }
+    // NR will stay in jdk.internal for now until we expose as a more formal feature
+    private static final ClassDesc CD_NullRestricted = ClassDesc.of("jdk.internal.vm.annotation.NullRestricted");
 
     /**
      * @param args source and destination
@@ -137,10 +111,7 @@ public final class StrictCompiler {
                     oldAccessFlags |= ACC_STRICT;
                 }
                 builder.withFlags(oldAccessFlags);
-                if (nullRestricted) {
-                    assert strict : name;
-                    builder.with(NullRestrictedAttribute.INSTANCE);
-                }
+                assert !nullRestricted || strict : name;
             }
         }));
 
