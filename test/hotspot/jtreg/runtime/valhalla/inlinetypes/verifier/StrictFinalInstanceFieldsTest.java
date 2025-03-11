@@ -24,7 +24,8 @@
 /*
  * @test
  * @enablePreview
- * @compile --add-exports=java.base/jdk.internal.vm.annotation=ALL-UNNAMED -XDgenerateAssertUnsetFieldsFrame StrictFinalInstanceFieldsTest.java
+ * @library /test/lib
+ * @run main/othervm jdk.test.lib.StrictTransformer StrictFinalInstanceFieldsTest.java
  * @run main/othervm -Xlog:verification StrictFinalInstanceFieldsTest
  */
 
