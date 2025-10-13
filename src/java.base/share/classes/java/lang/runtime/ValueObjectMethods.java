@@ -25,7 +25,19 @@
 
 package java.lang.runtime;
 
+import java.lang.classfile.BootstrapMethodEntry;
+import java.lang.classfile.ClassFile;
+import java.lang.classfile.ClassHierarchyResolver;
+import java.lang.classfile.constantpool.ConstantPoolBuilder;
+import java.lang.classfile.constantpool.InvokeDynamicEntry;
+import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDescs;
+import java.lang.constant.DirectMethodHandleDesc;
+import java.lang.constant.DynamicCallSiteDesc;
+import java.lang.constant.DynamicConstantDesc;
+import java.lang.constant.MethodTypeDesc;
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandleInfo;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
@@ -51,8 +63,11 @@ import jdk.internal.access.JavaLangInvokeAccess;
 import jdk.internal.access.SharedSecrets;
 import jdk.internal.value.LayoutIteration;
 import jdk.internal.value.ValueClass;
+import jdk.internal.vm.annotation.Stable;
 import sun.invoke.util.Wrapper;
 
+import static java.lang.classfile.ClassFile.ACC_STATIC;
+import static java.lang.constant.ConstantDescs.*;
 import static java.lang.invoke.MethodHandles.constant;
 import static java.lang.invoke.MethodHandles.dropArguments;
 import static java.lang.invoke.MethodHandles.filterArguments;
@@ -78,6 +93,156 @@ final class ValueObjectMethods {
     private static final int MAX_NODE_VISITS =
             Integer.getInteger("jdk.value.recursion.threshold", Integer.MAX_VALUE);
     private static final JavaLangInvokeAccess JLIA = SharedSecrets.getJavaLangInvokeAccess();
+
+    //---------------------------------------------------------------------
+
+    /// `(clz, clz, int[]) -> int`
+    private static MethodHandle findRecursiveEquals(Class<?> clz) {
+        throw new UnsupportedOperationException();
+    }
+
+    /// `(clz, int[]) -> int`
+    private static MethodHandle findRecursiveHash(Class<?> clz) {
+        throw new UnsupportedOperationException();
+    }
+
+    record SpinData(MethodHandle recursiveEquals, MethodHandle recursiveHash) {
+        int recursiveHash(Object o) {
+            return recursiveHash(o, new int[] { MAX_NODE_VISITS });
+        }
+
+        int recursiveHash(Object o, int[] counter) {
+            try {
+                return (int) recursiveHash.invoke(o, counter);
+            } catch (Error | RuntimeException e) {
+                throw e;
+            } catch (Throwable e) {
+                throw new InternalError(e);
+            }
+        }
+
+        boolean recursiveEquals(Object o0, Object o1) {
+            return recursiveEquals(o0, o1, new int[] { MAX_NODE_VISITS });
+        }
+
+        boolean recursiveEquals(Object o0, Object o1, int[] counter) {
+            try {
+                return (boolean) recursiveEquals.invoke(o0, o1, counter);
+            } catch (Error | RuntimeException e) {
+                throw e;
+            } catch (Throwable e) {
+                throw new InternalError(e);
+            }
+        }
+    }
+
+    static final class SpinLock {
+        private final Class<?> type;
+        @Stable
+        SpinData dataCache;
+
+        SpinLock(Class<?> type) {
+            this.type = type;
+        }
+
+        SpinData data() {
+            var d = dataCache;
+            if (d != null)
+                return d;
+            return slowGetData();
+        }
+
+        // No racy class spinning!
+        private synchronized SpinData slowGetData() {
+            var d = dataCache;
+            // Someone won the race
+            if (d != null)
+                return d;
+            // TODO actually spin the methods
+
+            var getters = LayoutIteration.ELEMENTS.get(type);
+            boolean hasRecursion;
+            recursionCheck:
+            {
+                for (var getter : getters) {
+                    if (!getter.type().returnType().isPrimitive()) {
+                        hasRecursion = true;
+                        break recursionCheck;
+                    }
+                }
+                hasRecursion = false;
+            }
+
+            var implClassName = type.getName();
+            if (type.isHidden()) {
+                implClassName = implClassName.replace('/', '_');
+            }
+            implClassName = implClassName.replace('.', '/') + "$$ObjectMethods";
+
+            ConstantPoolBuilder cp = ConstantPoolBuilder.of();
+            var thisClass = cp.classEntry(ClassDesc.of(implClassName));
+            var bytes = ClassFile.of(ClassFile.ClassHierarchyResolverOption.of(ClassHierarchyResolver.ofClassLoading(type.getClassLoader())))
+                    .build(thisClass, cp, clb -> {
+                        BootstrapMethodEntry recursiveBsm;
+                        if (hasRecursion) {
+                            var nameAndTypeEntry = cp.nameAndTypeEntry("recursiveBoot", MethodTypeDesc.of(CD_CallSite, CD_MethodHandles_Lookup, CD_String, CD_MethodType));
+                            clb.withMethodBody(nameAndTypeEntry.name(), nameAndTypeEntry.type(), ACC_STATIC, cob -> {
+                                var constCallSiteDesc = ClassDesc.ofInternalName("java/lang/invoke/ConstantCallSite");
+                                // return new ConstantCallSite(recursiveFactory.invokeExact(type.parameterType(0)));
+                                cob.new_(constCallSiteDesc)
+                                   .dup()
+                                   .loadConstant(DynamicConstantDesc.ofNamed(BSM_CLASS_DATA_AT, DEFAULT_NAME, CD_MethodHandle, 0)) // hackMh
+                                   .aload(2)
+                                   .iconst_0()
+                                   .invokevirtual(CD_MethodType, "parameterType", MethodTypeDesc.of(CD_Class, CD_int))
+                                   .invokevirtual(CD_MethodHandle, "invokeExact", MethodTypeDesc.of(CD_MethodHandle, CD_Class))
+                                   .invokespecial(constCallSiteDesc, INIT_NAME, MethodTypeDesc.of(CD_void, CD_MethodHandle))
+                                   .areturn();
+                            });
+                            recursiveBsm = cp.bsmEntry(cp.methodHandleEntry(MethodHandleInfo.REF_invokeStatic, cp.methodRefEntry(thisClass, nameAndTypeEntry)), List.of());
+                        } else {
+                            recursiveBsm = null;
+                        }
+                    });
+        }
+    }
+
+    private static final ClassValue<SpinLock> SPINS = new ClassValue<>() {
+        @Override
+        protected SpinLock computeValue(Class<?> type) {
+            // Initialization here is racy. Lock initialization in spin lock
+            if (!ValueClass.isConcreteValueClass(type))
+                throw new InternalError(type.getTypeName());
+            return new SpinLock(type);
+        }
+    };
+
+    private static void decreaseCounter(int[] counter) {
+        if (--counter[0] < 0)
+            throw new StackOverflowError();
+    }
+
+    private static int recursiveHash(Object a, int[] counter) {
+        if (a == null)
+            return 0;
+        var clazz = a.getClass();
+        return ValueClass.isConcreteValueClass(clazz)
+                ? SPINS.get(clazz).data().recursiveHash(a, counter)
+                : System.identityHashCode(a);
+    }
+
+    private static boolean recursiveEquals(Object a, Object b, int[] counter) {
+        if (a == null)
+            return b == null;
+        var clazz = a.getClass();
+        if (b == null || b.getClass() != clazz)
+            return false;
+        return ValueClass.isConcreteValueClass(clazz)
+                ? SPINS.get(clazz).data().recursiveEquals(a, b, counter)
+                : a == b;
+    }
+
+    //---------------------------------------------------------------------
 
     static class MethodHandleBuilder {
         private static final HashMap<Class<?>, MethodHandle> primitiveSubstitutable = new HashMap<>();
