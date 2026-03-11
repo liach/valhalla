@@ -49,9 +49,6 @@ import java.util.LinkedHashMap;
 import java.util.HashSet;
 import java.util.Set;
 
-import jdk.internal.misc.PreviewFeatures;
-
-
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 
@@ -124,8 +121,6 @@ public class BasicAccessFlagTest {
 
             Set<AccessFlag.Location> locations = new HashSet<>();
             for (var accessFlag : value) {
-                if (accessFlag.equals(AccessFlag.SUPER))
-                    continue;       // SUPER is defined to overlap with IDENTITY
                 for (var location : accessFlag.locations()) {
                     boolean added = locations.add(location);
                     if (!added) {
@@ -156,7 +151,7 @@ public class BasicAccessFlagTest {
             for (var location : accessFlag.locations()) {
                 Set<AccessFlag> computedSet =
                     AccessFlag.maskToAccessFlags(accessFlag.mask(), location);
-                if (!computedSet.containsAll(expectedSet)) {
+                if (!expectedSet.equals(computedSet)) {
                     System.out.println("expected: " + expectedSet);
                     System.out.println("computed: " + computedSet);
                     throw new RuntimeException("Bad set computation on " +
