@@ -31,14 +31,18 @@ import java.lang.annotation.Target;
 import static java.lang.annotation.ElementType.TYPE;
 
 /**
- * Indicates the API declaration in question is associated with a migrated value class.
+ * Indicates the class declaration in question is associated with a migrated value class.
  *
- * Note this internal annotation is handled specially by the javac compiler.
+ * <p>This internal annotation is consumed by
+ * {@code make/langtools/src/classes/build/tools/valhalla/valuetypes/GenValueClasses.java}
+ * to automatically convert the class to a value class from its source code.
+ *
+ * <p>Note this internal annotation is handled specially by the javac compiler.
  * To work properly with {@code --release older-release}, it requires special
  * handling in {@code make/langtools/src/classes/build/tools/symbolgenerator/CreateSymbols.java}
  * and {@code src/jdk.compiler/share/classes/com/sun/tools/javac/jvm/ClassReader.java}.
  *
- * @since 23
+ * @since Valhalla
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(value={TYPE})

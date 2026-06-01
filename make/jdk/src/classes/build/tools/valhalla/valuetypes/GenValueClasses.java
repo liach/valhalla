@@ -90,6 +90,9 @@ public final class GenValueClasses extends AbstractProcessor {
     // Matches preprocessor option flag in CompileJavaModules.gmk.
     static final String OUTDIR_OPTION_KEY = "valueclasses.outdir";
 
+    // The output directory DOES NOT include the module name subdirectory,
+    // yet this processor is supposed to dump for exactly one module, into
+    // the module-name subdirectory in the given output directory.
     private Path outDir = null;
     private Trees trees = null;
 
@@ -213,6 +216,7 @@ public final class GenValueClasses extends AbstractProcessor {
         // Since annotations are held as "modifiers", and since we only process
         // elements with annotations, the positions of the modifiers section must
         // be well-defined.
+        @SuppressWarnings("removal")
         long pos = trees.getSourcePositions().getEndPosition(compilationUnit, classTree.getModifiers());
         if (pos == Diagnostic.NOPOS) {
             throw new IllegalStateException("Missing position information: " + classElement);
