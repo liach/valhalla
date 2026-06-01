@@ -198,8 +198,7 @@ public class JavacParser implements Parser {
         this.allowYieldStatement = Feature.SWITCH_EXPRESSION.allowedInSource(source);
         this.allowRecords = Feature.RECORDS.allowedInSource(source);
         this.allowSealedTypes = Feature.SEALED_CLASSES.allowedInSource(source);
-        this.allowValueClasses = (!preview.isPreview(Feature.VALUE_CLASSES) || preview.isEnabled()) &&
-                Feature.VALUE_CLASSES.allowedInSource(source);
+        this.allowValueClasses = preview.isEnabled() && Feature.VALUE_CLASSES.allowedInSource(source);
         updateUnexpectedTopLevelDefinitionStartError(false);
     }
 
@@ -223,8 +222,7 @@ public class JavacParser implements Parser {
         this.allowYieldStatement = Feature.SWITCH_EXPRESSION.allowedInSource(source);
         this.allowRecords = Feature.RECORDS.allowedInSource(source);
         this.allowSealedTypes = Feature.SEALED_CLASSES.allowedInSource(source);
-        this.allowValueClasses = (!preview.isPreview(Feature.VALUE_CLASSES) || preview.isEnabled()) &&
-                Feature.VALUE_CLASSES.allowedInSource(source);
+        this.allowValueClasses = preview.isEnabled() && Feature.VALUE_CLASSES.allowedInSource(source);
         updateUnexpectedTopLevelDefinitionStartError(false);
     }
 
@@ -3451,9 +3449,17 @@ public class JavacParser implements Parser {
                 case GT:
                     typeDepth--;
                     if (typeDepth == 0 && !peekToken(lookahead, DOT)) {
-                         return peekToken(lookahead, LAX_IDENTIFIER) ||
-                                peekToken(lookahead, tk -> tk == LPAREN) ? PatternResult.PATTERN
-                                                                         : PatternResult.EXPRESSION;
+                         if (peekToken(lookahead, LAX_IDENTIFIER) ||
+                            peekToken(lookahead, tk -> tk == LPAREN)) {
+                             return PatternResult.PATTERN;
+                         }
+                         else if (peekToken(lookahead, LBRACKET) ||
+                                  peekToken(lookahead, MONKEYS_AT)) {
+                             break;
+                         }
+                         else {
+                             return PatternResult.EXPRESSION;
+                         }
                     } else if (typeDepth < 0) return PatternResult.EXPRESSION;
                     break;
                 case MONKEYS_AT:

@@ -75,7 +75,6 @@ class JNIid;
 class JvmtiCachedClassFieldMap;
 class nmethodBucket;
 class OopMapCache;
-class BufferedInlineTypeBlob;
 class InterpreterOopMap;
 class PackageEntry;
 class ModuleEntry;
@@ -148,8 +147,6 @@ class InlineLayoutInfo : public MetaspaceObj {
 
  public:
   InlineLayoutInfo(): _klass(nullptr), _kind(LayoutKind::UNKNOWN), _null_marker_offset(-1)  {}
-  InlineLayoutInfo(InlineKlass* ik, LayoutKind kind, int size, int nm_offset):
-    _klass(ik), _kind(kind), _null_marker_offset(nm_offset) {}
 
   InlineKlass* klass() const { return _klass; }
   void set_klass(InlineKlass* k) { _klass = k; }
@@ -179,7 +176,6 @@ class InlineLayoutInfo : public MetaspaceObj {
 
 class InstanceKlass: public Klass {
   friend class VMStructs;
-  friend class JVMCIVMStructs;
   friend class ClassFileParser;
   friend class CompileReplay;
   friend class TemplateTable;
@@ -390,9 +386,6 @@ class InstanceKlass: public Klass {
   bool defined_by_other_loaders() const    { return _misc_flags.defined_by_other_loaders(); }
   void set_class_loader_type()             { _misc_flags.set_class_loader_type(_class_loader_data); }
 
-  // Check if the class can be shared in CDS
-  bool is_shareable() const;
-
   bool shared_loading_failed() const { return _misc_flags.shared_loading_failed(); }
 
   void set_shared_loading_failed() { _misc_flags.set_shared_loading_failed(true); }
@@ -406,7 +399,7 @@ class InstanceKlass: public Klass {
   bool has_inlined_fields() const { return _misc_flags.has_inlined_fields(); }
   void set_has_inlined_fields()   { _misc_flags.set_has_inlined_fields(true); }
 
-  bool is_naturally_atomic() const  { return _misc_flags.is_naturally_atomic(); }
+  bool is_naturally_atomic(bool null_free) const;
   void set_is_naturally_atomic()    { _misc_flags.set_is_naturally_atomic(true); }
 
   // Query if this class has atomicity requirements (default is yes)
@@ -1073,7 +1066,6 @@ public:
   inline intptr_t* start_of_itable() const;
   inline intptr_t* end_of_itable() const;
   inline oop static_field_base_raw();
-  bool bounds_check(address addr, bool edge_ok = false, intptr_t size_in_bytes = -1) const PRODUCT_RETURN0;
 
   inline OopMapBlock* start_of_nonstatic_oop_maps() const;
   inline Klass** end_of_nonstatic_oop_maps() const;
@@ -1152,7 +1144,6 @@ public:
 
   // Naming
   const char* signature_name() const override;
-  const char* signature_name_of_carrier(char c) const;
 
   // Oop fields (and metadata) iterators
   //
@@ -1269,8 +1260,6 @@ private:
   void link_previous_versions(InstanceKlass* pv) { _previous_versions = pv; }
   void mark_newly_obsolete_methods(Array<Method*>* old_methods, int emcp_method_count);
 #endif
-  // log class name to classlist
-  void log_to_classlist() const;
 public:
 
 #if INCLUDE_CDS
@@ -1302,6 +1291,7 @@ public:
   // Printing
   void print_on(outputStream* st) const override;
   void print_value_on(outputStream* st) const override;
+  void print_class_flags(outputStream* st) const;
 
   void oop_print_value_on(oop obj, outputStream* st) override;
 

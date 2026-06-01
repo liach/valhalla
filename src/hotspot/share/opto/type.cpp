@@ -56,9 +56,6 @@
 #include "utilities/ostream.hpp"
 #include "utilities/powerOfTwo.hpp"
 #include "utilities/stringUtils.hpp"
-#if INCLUDE_SHENANDOAHGC
-#include "gc/shenandoah/c2/shenandoahBarrierSetC2.hpp"
-#endif // INCLUDE_SHENANDOAHGC
 
 // Portions of code courtesy of Clifford Click
 
@@ -113,66 +110,66 @@ void Type::Offset::dump2(outputStream *st) const {
 
 // Array which maps compiler types to Basic Types
 const Type::TypeInfo Type::_type_info[Type::lastype] = {
-  { Bad,             T_ILLEGAL,    "bad",           false, Node::NotAMachineReg, relocInfo::none          },  // Bad
-  { Control,         T_ILLEGAL,    "control",       false, 0,                    relocInfo::none          },  // Control
-  { Bottom,          T_VOID,       "top",           false, 0,                    relocInfo::none          },  // Top
-  { Bad,             T_INT,        "int:",          false, Op_RegI,              relocInfo::none          },  // Int
-  { Bad,             T_LONG,       "long:",         false, Op_RegL,              relocInfo::none          },  // Long
-  { Half,            T_VOID,       "half",          false, 0,                    relocInfo::none          },  // Half
-  { Bad,             T_NARROWOOP,  "narrowoop:",    false, Op_RegN,              relocInfo::none          },  // NarrowOop
-  { Bad,             T_NARROWKLASS,"narrowklass:",  false, Op_RegN,              relocInfo::none          },  // NarrowKlass
-  { Bad,             T_ILLEGAL,    "tuple:",        false, Node::NotAMachineReg, relocInfo::none          },  // Tuple
-  { Bad,             T_ARRAY,      "array:",        false, Node::NotAMachineReg, relocInfo::none          },  // Array
-  { Bad,             T_ARRAY,      "interfaces:",   false, Node::NotAMachineReg, relocInfo::none          },  // Interfaces
+  { Bad,             T_ILLEGAL,    "bad",           false, Node::NotAMachineReg},  // Bad
+  { Control,         T_ILLEGAL,    "control",       false, 0                   },  // Control
+  { Bottom,          T_VOID,       "top",           false, 0                   },  // Top
+  { Bad,             T_INT,        "int:",          false, Op_RegI             },  // Int
+  { Bad,             T_LONG,       "long:",         false, Op_RegL             },  // Long
+  { Half,            T_VOID,       "half",          false, 0                   },  // Half
+  { Bad,             T_NARROWOOP,  "narrowoop:",    false, Op_RegN             },  // NarrowOop
+  { Bad,             T_NARROWKLASS,"narrowklass:",  false, Op_RegN             },  // NarrowKlass
+  { Bad,             T_ILLEGAL,    "tuple:",        false, Node::NotAMachineReg},  // Tuple
+  { Bad,             T_ARRAY,      "array:",        false, Node::NotAMachineReg},  // Array
+  { Bad,             T_ARRAY,      "interfaces:",   false, Node::NotAMachineReg},  // Interfaces
 
 #if defined(PPC64)
-  { Bad,             T_ILLEGAL,    "vectormask:",   false, Op_RegVectMask,       relocInfo::none          },  // VectorMask.
-  { Bad,             T_ILLEGAL,    "vectora:",      false, Op_VecA,              relocInfo::none          },  // VectorA.
-  { Bad,             T_ILLEGAL,    "vectors:",      false, 0,                    relocInfo::none          },  // VectorS
-  { Bad,             T_ILLEGAL,    "vectord:",      false, Op_RegL,              relocInfo::none          },  // VectorD
-  { Bad,             T_ILLEGAL,    "vectorx:",      false, Op_VecX,              relocInfo::none          },  // VectorX
-  { Bad,             T_ILLEGAL,    "vectory:",      false, 0,                    relocInfo::none          },  // VectorY
-  { Bad,             T_ILLEGAL,    "vectorz:",      false, 0,                    relocInfo::none          },  // VectorZ
+  { Bad,             T_ILLEGAL,    "vectormask:",   false, Op_RegVectMask      },  // VectorMask.
+  { Bad,             T_ILLEGAL,    "vectora:",      false, Op_VecA             },  // VectorA.
+  { Bad,             T_ILLEGAL,    "vectors:",      false, 0                   },  // VectorS
+  { Bad,             T_ILLEGAL,    "vectord:",      false, Op_RegL             },  // VectorD
+  { Bad,             T_ILLEGAL,    "vectorx:",      false, Op_VecX             },  // VectorX
+  { Bad,             T_ILLEGAL,    "vectory:",      false, 0                   },  // VectorY
+  { Bad,             T_ILLEGAL,    "vectorz:",      false, 0                   },  // VectorZ
 #elif defined(S390)
-  { Bad,             T_ILLEGAL,    "vectormask:",   false, Op_RegVectMask,       relocInfo::none          },  // VectorMask.
-  { Bad,             T_ILLEGAL,    "vectora:",      false, Op_VecA,              relocInfo::none          },  // VectorA.
-  { Bad,             T_ILLEGAL,    "vectors:",      false, 0,                    relocInfo::none          },  // VectorS
-  { Bad,             T_ILLEGAL,    "vectord:",      false, Op_RegL,              relocInfo::none          },  // VectorD
-  { Bad,             T_ILLEGAL,    "vectorx:",      false, Op_VecX,              relocInfo::none          },  // VectorX
-  { Bad,             T_ILLEGAL,    "vectory:",      false, 0,                    relocInfo::none          },  // VectorY
-  { Bad,             T_ILLEGAL,    "vectorz:",      false, 0,                    relocInfo::none          },  // VectorZ
+  { Bad,             T_ILLEGAL,    "vectormask:",   false, Op_RegVectMask      },  // VectorMask.
+  { Bad,             T_ILLEGAL,    "vectora:",      false, Op_VecA             },  // VectorA.
+  { Bad,             T_ILLEGAL,    "vectors:",      false, 0                   },  // VectorS
+  { Bad,             T_ILLEGAL,    "vectord:",      false, Op_RegL             },  // VectorD
+  { Bad,             T_ILLEGAL,    "vectorx:",      false, Op_VecX             },  // VectorX
+  { Bad,             T_ILLEGAL,    "vectory:",      false, 0                   },  // VectorY
+  { Bad,             T_ILLEGAL,    "vectorz:",      false, 0                   },  // VectorZ
 #else // all other
-  { Bad,             T_ILLEGAL,    "vectormask:",   false, Op_RegVectMask,       relocInfo::none          },  // VectorMask.
-  { Bad,             T_ILLEGAL,    "vectora:",      false, Op_VecA,              relocInfo::none          },  // VectorA.
-  { Bad,             T_ILLEGAL,    "vectors:",      false, Op_VecS,              relocInfo::none          },  // VectorS
-  { Bad,             T_ILLEGAL,    "vectord:",      false, Op_VecD,              relocInfo::none          },  // VectorD
-  { Bad,             T_ILLEGAL,    "vectorx:",      false, Op_VecX,              relocInfo::none          },  // VectorX
-  { Bad,             T_ILLEGAL,    "vectory:",      false, Op_VecY,              relocInfo::none          },  // VectorY
-  { Bad,             T_ILLEGAL,    "vectorz:",      false, Op_VecZ,              relocInfo::none          },  // VectorZ
+  { Bad,             T_ILLEGAL,    "vectormask:",   false, Op_RegVectMask      },  // VectorMask.
+  { Bad,             T_ILLEGAL,    "vectora:",      false, Op_VecA             },  // VectorA.
+  { Bad,             T_ILLEGAL,    "vectors:",      false, Op_VecS             },  // VectorS
+  { Bad,             T_ILLEGAL,    "vectord:",      false, Op_VecD             },  // VectorD
+  { Bad,             T_ILLEGAL,    "vectorx:",      false, Op_VecX             },  // VectorX
+  { Bad,             T_ILLEGAL,    "vectory:",      false, Op_VecY             },  // VectorY
+  { Bad,             T_ILLEGAL,    "vectorz:",      false, Op_VecZ             },  // VectorZ
 #endif
-  { Bad,             T_ADDRESS,    "anyptr:",       false, Op_RegP,              relocInfo::none          },  // AnyPtr
-  { Bad,             T_ADDRESS,    "rawptr:",       false, Op_RegP,              relocInfo::external_word_type },  // RawPtr
-  { Bad,             T_OBJECT,     "oop:",          true,  Op_RegP,              relocInfo::oop_type      },  // OopPtr
-  { Bad,             T_OBJECT,     "inst:",         true,  Op_RegP,              relocInfo::oop_type      },  // InstPtr
-  { Bad,             T_OBJECT,     "ary:",          true,  Op_RegP,              relocInfo::oop_type      },  // AryPtr
-  { Bad,             T_METADATA,   "metadata:",     false, Op_RegP,              relocInfo::metadata_type },  // MetadataPtr
-  { Bad,             T_METADATA,   "klass:",        false, Op_RegP,              relocInfo::metadata_type },  // KlassPtr
-  { Bad,             T_METADATA,   "instklass:",    false, Op_RegP,              relocInfo::metadata_type },  // InstKlassPtr
-  { Bad,             T_METADATA,   "aryklass:",     false, Op_RegP,              relocInfo::metadata_type },  // AryKlassPtr
-  { Bad,             T_OBJECT,     "func",          false, 0,                    relocInfo::none          },  // Function
-  { Abio,            T_ILLEGAL,    "abIO",          false, 0,                    relocInfo::none          },  // Abio
-  { Return_Address,  T_ADDRESS,    "return_address",false, Op_RegP,              relocInfo::none          },  // Return_Address
-  { Memory,          T_ILLEGAL,    "memory",        false, 0,                    relocInfo::none          },  // Memory
-  { HalfFloatBot,    T_SHORT,      "halffloat_top", false, Op_RegF,              relocInfo::none          },  // HalfFloatTop
-  { HalfFloatCon,    T_SHORT,      "hfcon:",        false, Op_RegF,              relocInfo::none          },  // HalfFloatCon
-  { HalfFloatTop,    T_SHORT,      "short",         false, Op_RegF,              relocInfo::none          },  // HalfFloatBot
-  { FloatBot,        T_FLOAT,      "float_top",     false, Op_RegF,              relocInfo::none          },  // FloatTop
-  { FloatCon,        T_FLOAT,      "ftcon:",        false, Op_RegF,              relocInfo::none          },  // FloatCon
-  { FloatTop,        T_FLOAT,      "float",         false, Op_RegF,              relocInfo::none          },  // FloatBot
-  { DoubleBot,       T_DOUBLE,     "double_top",    false, Op_RegD,              relocInfo::none          },  // DoubleTop
-  { DoubleCon,       T_DOUBLE,     "dblcon:",       false, Op_RegD,              relocInfo::none          },  // DoubleCon
-  { DoubleTop,       T_DOUBLE,     "double",        false, Op_RegD,              relocInfo::none          },  // DoubleBot
-  { Top,             T_ILLEGAL,    "bottom",        false, 0,                    relocInfo::none          }   // Bottom
+  { Bad,             T_ADDRESS,    "anyptr:",       false, Op_RegP             },  // AnyPtr
+  { Bad,             T_ADDRESS,    "rawptr:",       false, Op_RegP             },  // RawPtr
+  { Bad,             T_OBJECT,     "oop:",          true,  Op_RegP             },  // OopPtr
+  { Bad,             T_OBJECT,     "inst:",         true,  Op_RegP             },  // InstPtr
+  { Bad,             T_OBJECT,     "ary:",          true,  Op_RegP             },  // AryPtr
+  { Bad,             T_METADATA,   "metadata:",     false, Op_RegP             },  // MetadataPtr
+  { Bad,             T_METADATA,   "klass:",        false, Op_RegP             },  // KlassPtr
+  { Bad,             T_METADATA,   "instklass:",    false, Op_RegP             },  // InstKlassPtr
+  { Bad,             T_METADATA,   "aryklass:",     false, Op_RegP             },  // AryKlassPtr
+  { Bad,             T_OBJECT,     "func",          false, 0                   },  // Function
+  { Abio,            T_ILLEGAL,    "abIO",          false, 0                   },  // Abio
+  { Return_Address,  T_ADDRESS,    "return_address",false, Op_RegP             },  // Return_Address
+  { Memory,          T_ILLEGAL,    "memory",        false, 0                   },  // Memory
+  { HalfFloatBot,    T_SHORT,      "halffloat_top", false, Op_RegF             },  // HalfFloatTop
+  { HalfFloatCon,    T_SHORT,      "hfcon:",        false, Op_RegF             },  // HalfFloatCon
+  { HalfFloatTop,    T_SHORT,      "short",         false, Op_RegF             },  // HalfFloatBot
+  { FloatBot,        T_FLOAT,      "float_top",     false, Op_RegF             },  // FloatTop
+  { FloatCon,        T_FLOAT,      "ftcon:",        false, Op_RegF             },  // FloatCon
+  { FloatTop,        T_FLOAT,      "float",         false, Op_RegF             },  // FloatBot
+  { DoubleBot,       T_DOUBLE,     "double_top",    false, Op_RegD             },  // DoubleTop
+  { DoubleCon,       T_DOUBLE,     "dblcon:",       false, Op_RegD             },  // DoubleCon
+  { DoubleTop,       T_DOUBLE,     "double",        false, Op_RegD             },  // DoubleBot
+  { Top,             T_ILLEGAL,    "bottom",        false, 0                   }   // Bottom
 };
 
 // Map ideal registers (machine types) to ideal types
@@ -286,7 +283,7 @@ const Type* Type::get_typeflow_type(ciType* type) {
 
   case T_ADDRESS:
     assert(type->is_return_address(), "");
-    return TypeRawPtr::make((address)(intptr_t)type->as_return_address()->bci());
+    return TypeRawPtr::make((address)(intptr_t)type->as_return_address()->bci(), relocInfo::none);
 
   case T_OBJECT:
     return Type::get_const_type(type->unwrap())->join_speculative(type->is_null_free() ? TypePtr::NOTNULL : TypePtr::BOTTOM);
@@ -794,7 +791,7 @@ void Type::Initialize_shared(Compile* current) {
   // get_zero_type() should not happen for T_CONFLICT
   _zero_type[T_CONFLICT]= nullptr;
 
-  TypeVect::VECTMASK = (TypeVect*)(new TypeVectMask(T_BOOLEAN, MaxVectorSize))->hashcons();
+  TypeVect::VECTMASK = (TypeVect*)(new TypePVectMask(T_BOOLEAN, MaxVectorSize))->hashcons();
   mreg2type[Op_RegVectMask] = TypeVect::VECTMASK;
 
   if (Matcher::supports_scalable_vector()) {
@@ -824,10 +821,6 @@ void Type::Initialize_shared(Compile* current) {
   mreg2type[Op_VecX] = TypeVect::VECTX;
   mreg2type[Op_VecY] = TypeVect::VECTY;
   mreg2type[Op_VecZ] = TypeVect::VECTZ;
-
-#if INCLUDE_SHENANDOAHGC
-  ShenandoahBarrierSetC2::init();
-#endif //INCLUDE_SHENANDOAHGC
 
   BarrierSetC2::make_clone_type();
   LockNode::initialize_lock_Type();
@@ -2210,13 +2203,15 @@ static void collect_inline_fields(ciInlineKlass* vk, const Type** field_array, u
 
 //------------------------------make-------------------------------------------
 // Make a TypeTuple from the range of a method signature
-const TypeTuple *TypeTuple::make_range(ciSignature* sig, InterfaceHandling interface_handling, bool ret_vt_fields) {
+const TypeTuple* TypeTuple::make_range(ciSignature* sig, InterfaceHandling interface_handling, bool ret_vt_fields, bool is_call) {
   ciType* return_type = sig->return_type();
   uint arg_cnt = return_type->size();
   if (ret_vt_fields) {
     arg_cnt = return_type->as_inline_klass()->inline_arg_slots() + 1;
-    // InlineTypeNode::NullMarker field used for null checking
-    arg_cnt++;
+    if (is_call) {
+      // InlineTypeNode::NullMarker field returned by scalarized calls
+      arg_cnt++;
+    }
   }
   const Type **field_array = fields(arg_cnt);
   switch (return_type->basic_type()) {
@@ -2229,12 +2224,14 @@ const TypeTuple *TypeTuple::make_range(ciSignature* sig, InterfaceHandling inter
     field_array[TypeFunc::Parms+1] = Type::HALF;
     break;
   case T_OBJECT:
-    if (return_type->is_inlinetype() && ret_vt_fields) {
+    if (ret_vt_fields) {
       uint pos = TypeFunc::Parms;
       field_array[pos++] = get_const_type(return_type); // Oop might be null when returning as fields
       collect_inline_fields(return_type->as_inline_klass(), field_array, pos);
-      // InlineTypeNode::NullMarker field used for null checking
-      field_array[pos++] = get_const_basic_type(T_BOOLEAN);
+      if (is_call) {
+        // InlineTypeNode::NullMarker field returned by scalarized calls
+        field_array[pos++] = get_const_basic_type(T_BOOLEAN);
+      }
       assert(pos == (TypeFunc::Parms + arg_cnt), "out of bounds");
       break;
     } else {
@@ -2554,7 +2551,7 @@ const TypePtr* TypePtr::with_inline_depth(int depth) const {
   if (!UseInlineDepthForSpeculativeTypes) {
     return this;
   }
-  return make(AnyPtr, _ptr, _offset, _speculative, depth);
+  return make(AnyPtr, _ptr, _offset, _speculative, depth, _reloc);
 }
 
 //------------------------------dump2------------------------------------------
@@ -2583,7 +2580,16 @@ bool TypeAry::singleton(void) const {
 }
 
 bool TypeAry::empty(void) const {
-  return _elem->empty() || _size->empty();
+  assert(!_size->empty(), "TypeInt is never empty");
+  // TODO 8385426 This should be simplified at construction time once we get rid of dual
+  // Doing it with the dual-based join is annoying. TypeAry::empty tests whether the
+  // element type is empty. When computing the dual of an array that can be flat or not,
+  // we will get an element type that is empty, and doesn't need more. We even shouldn't
+  // do more otherwise, we can't make the dual involutive. But if we compute the
+  // intersection of a flat and a non-flat array, we could change the element type to an
+  // empty type to reduce the abstract value. And we must be careful not to do that in
+  // the dual world.
+  return _elem->empty() || (_flat && _not_flat);
 }
 
 //--------------------------ary_must_be_exact----------------------------------
@@ -2668,7 +2674,7 @@ const TypeVect* TypeVect::make(BasicType elem_bt, uint length, bool is_mask) {
 }
 
 // Create a vector mask type with the given element basic type and length.
-// - Returns "TypeVectMask" (PVectMask) for platforms that support the predicate
+// - Returns "TypePVectMask" (PVectMask) for platforms that support the predicate
 //   feature and it is implemented properly in the backend, allowing the mask to
 //   be stored in a predicate/mask register.
 // - Returns a normal vector type "TypeVectA ~ TypeVectZ" (NVectMask) otherwise,
@@ -2676,7 +2682,7 @@ const TypeVect* TypeVect::make(BasicType elem_bt, uint length, bool is_mask) {
 const TypeVect* TypeVect::makemask(BasicType elem_bt, uint length) {
   if (Matcher::has_predicated_vectors() &&
       Matcher::match_rule_supported_vector_masked(Op_VectorLoadMask, length, elem_bt)) {
-    return TypeVectMask::make(elem_bt, length);
+    return TypePVectMask::make(elem_bt, length);
   } else {
     return make(elem_bt, length);
   }
@@ -2776,8 +2782,8 @@ void TypeVect::dump2(Dict& d, uint depth, outputStream* st) const {
 }
 #endif
 
-const TypeVectMask* TypeVectMask::make(const BasicType elem_bt, uint length) {
-  return (TypeVectMask*) (new TypeVectMask(elem_bt, length))->hashcons();
+const TypePVectMask* TypePVectMask::make(const BasicType elem_bt, uint length) {
+  return (TypePVectMask*) (new TypePVectMask(elem_bt, length))->hashcons();
 }
 
 //=============================================================================
@@ -2799,15 +2805,17 @@ const TypePtr::PTR TypePtr::ptr_meet[TypePtr::lastPTR][TypePtr::lastPTR] = {
 };
 
 //------------------------------make-------------------------------------------
-const TypePtr* TypePtr::make(TYPES t, enum PTR ptr, Offset offset, const TypePtr* speculative, int inline_depth) {
-  return (TypePtr*)(new TypePtr(t,ptr,offset, speculative, inline_depth))->hashcons();
+const TypePtr* TypePtr::make(TYPES t, enum PTR ptr, Offset offset,
+                             const TypePtr* speculative, int inline_depth,
+                             relocInfo::relocType reloc) {
+  return (TypePtr*)(new TypePtr(t, ptr, offset, reloc, speculative, inline_depth))->hashcons();
 }
 
 //------------------------------cast_to_ptr_type-------------------------------
 const TypePtr* TypePtr::cast_to_ptr_type(PTR ptr) const {
   assert(_base == AnyPtr, "subclass must override cast_to_ptr_type");
   if( ptr == _ptr ) return this;
-  return make(_base, ptr, _offset, _speculative, _inline_depth);
+  return make(_base, ptr, _offset, _speculative, _inline_depth, _reloc);
 }
 
 //------------------------------get_con----------------------------------------
@@ -2914,7 +2922,7 @@ const char* const TypePtr::flat_in_array_msg[Uninitialized] = {
 };
 
 const Type *TypePtr::xdual() const {
-  return new TypePtr(AnyPtr, dual_ptr(), dual_offset(), dual_speculative(), dual_inline_depth());
+  return new TypePtr(AnyPtr, dual_ptr(), dual_offset(), relocInfo::none, dual_speculative(), dual_inline_depth());
 }
 
 //------------------------------xadd_offset------------------------------------
@@ -2924,24 +2932,25 @@ Type::Offset TypePtr::xadd_offset(intptr_t offset) const {
 
 //------------------------------add_offset-------------------------------------
 const TypePtr *TypePtr::add_offset( intptr_t offset ) const {
-  return make(AnyPtr, _ptr, xadd_offset(offset), _speculative, _inline_depth);
+  return make(AnyPtr, _ptr, xadd_offset(offset), _speculative, _inline_depth, _reloc);
 }
 
 const TypePtr *TypePtr::with_offset(intptr_t offset) const {
-  return make(AnyPtr, _ptr, Offset(offset), _speculative, _inline_depth);
+  return make(AnyPtr, _ptr, Offset(offset), _speculative, _inline_depth, _reloc);
 }
 
 //------------------------------eq---------------------------------------------
 // Structural equality check for Type representations
 bool TypePtr::eq( const Type *t ) const {
   const TypePtr *a = (const TypePtr*)t;
-  return _ptr == a->ptr() && _offset == a->_offset && eq_speculative(a) && _inline_depth == a->_inline_depth;
+  return _ptr == a->ptr() && offset() == a->offset() && _reloc == a->reloc() &&
+         eq_speculative(a) && _inline_depth == a->_inline_depth;
 }
 
 //------------------------------hash-------------------------------------------
 // Type-specific hashing function.
 uint TypePtr::hash(void) const {
-  return (uint)_ptr + (uint)offset() + (uint)hash_speculative() + (uint)_inline_depth;
+ return (uint)_ptr + (uint)offset() + (uint)_reloc + (uint)hash_speculative() + (uint)_inline_depth;
 }
 
 /**
@@ -2952,7 +2961,7 @@ const TypePtr* TypePtr::remove_speculative() const {
     return this;
   }
   assert(_inline_depth == InlineDepthTop || _inline_depth == InlineDepthBottom, "non speculative type shouldn't have inline depth");
-  return make(AnyPtr, _ptr, _offset, nullptr, _inline_depth);
+  return make(AnyPtr, _ptr, _offset, nullptr, _inline_depth, _reloc);
 }
 
 /**
@@ -3304,12 +3313,12 @@ const TypeRawPtr *TypeRawPtr::NOTNULL;
 const TypeRawPtr *TypeRawPtr::make( enum PTR ptr ) {
   assert( ptr != Constant, "what is the constant?" );
   assert( ptr != Null, "Use TypePtr for null" );
-  return (TypeRawPtr*)(new TypeRawPtr(ptr,nullptr))->hashcons();
+  return (TypeRawPtr*)(new TypeRawPtr(ptr, nullptr, relocInfo::none))->hashcons();
 }
 
-const TypeRawPtr *TypeRawPtr::make(address bits) {
+const TypeRawPtr* TypeRawPtr::make(address bits, relocInfo::relocType reloc) {
   assert(bits != nullptr, "Use TypePtr for null");
-  return (TypeRawPtr*)(new TypeRawPtr(Constant,bits))->hashcons();
+  return (TypeRawPtr*)(new TypeRawPtr(Constant, bits, reloc))->hashcons();
 }
 
 //------------------------------cast_to_ptr_type-------------------------------
@@ -3384,7 +3393,7 @@ const Type *TypeRawPtr::xmeet( const Type *t ) const {
 //------------------------------xdual------------------------------------------
 // Dual: compute field-by-field dual
 const Type *TypeRawPtr::xdual() const {
-  return new TypeRawPtr( dual_ptr(), _bits );
+  return new TypeRawPtr(dual_ptr(), _bits, _reloc);
 }
 
 //------------------------------add_offset-------------------------------------
@@ -3407,7 +3416,7 @@ const TypePtr* TypeRawPtr::add_offset(intptr_t offset) const {
     } else if ( sum == 0 ) {
       return TypePtr::NULL_PTR;
     } else {
-      return make( (address)sum );
+      return make((address)sum, _reloc);
     }
   }
   default:  ShouldNotReachHere();
@@ -3702,7 +3711,7 @@ bool TypeInterfaces::has_non_array_interface() const {
 //------------------------------TypeOopPtr-------------------------------------
 TypeOopPtr::TypeOopPtr(TYPES t, PTR ptr, ciKlass* k, const TypeInterfaces* interfaces, bool xk, ciObject* o, Offset offset, Offset field_offset,
                        int instance_id, const TypePtr* speculative, int inline_depth)
-  : TypePtr(t, ptr, offset, speculative, inline_depth),
+  : TypePtr(t, ptr, offset, relocInfo::oop_type, speculative, inline_depth),
     _const_oop(o), _klass(k),
     _interfaces(interfaces),
     _klass_is_exact(xk),
@@ -3971,13 +3980,12 @@ const TypeOopPtr* TypeOopPtr::make_from_klass_common(ciKlass *klass, bool klass_
     // Determine null-free/flat properties
     bool flat;
     bool not_flat;
-    bool is_null_free;
     bool not_null_free;
     bool atomic;
     if (xk) {
       flat = array_klass->is_flat_array_klass();
       not_flat = !flat;
-      is_null_free = array_klass->is_elem_null_free();
+      bool is_null_free = array_klass->is_elem_null_free();
       not_null_free = !is_null_free;
       atomic = array_klass->is_elem_atomic();
 
@@ -4366,29 +4374,6 @@ const TypeInterfaces* TypePtr::interfaces(ciKlass*& k, bool klass, bool interfac
     }
   }
   return TypeAryPtr::_array_interfaces;
-}
-
-/**
- *  Create constant type for a constant boxed value
- */
-const Type* TypeInstPtr::get_const_boxed_value() const {
-  assert(is_ptr_to_boxed_value(), "should be called only for boxed value");
-  assert((const_oop() != nullptr), "should be called only for constant object");
-  ciConstant constant = const_oop()->as_instance()->field_value_by_offset(offset());
-  BasicType bt = constant.basic_type();
-  switch (bt) {
-    case T_BOOLEAN:  return TypeInt::make(constant.as_boolean());
-    case T_INT:      return TypeInt::make(constant.as_int());
-    case T_CHAR:     return TypeInt::make(constant.as_char());
-    case T_BYTE:     return TypeInt::make(constant.as_byte());
-    case T_SHORT:    return TypeInt::make(constant.as_short());
-    case T_FLOAT:    return TypeF::make(constant.as_float());
-    case T_DOUBLE:   return TypeD::make(constant.as_double());
-    case T_LONG:     return TypeLong::make(constant.as_long());
-    default:         break;
-  }
-  fatal("Invalid boxed value type '%s'", type2name(bt));
-  return nullptr;
 }
 
 //------------------------------cast_to_ptr_type-------------------------------
@@ -5727,10 +5712,6 @@ void TypeAryPtr::dump2( Dict &d, uint depth, outputStream *st ) const {
 
 bool TypeAryPtr::empty(void) const {
   if (_ary->empty())       return true;
-  // FIXME: Does this belong here? Or in the meet code itself?
-  if (is_flat() && is_not_flat()) {
-    return true;
-  }
   return TypeOopPtr::empty();
 }
 
@@ -5780,29 +5761,32 @@ const TypeAryPtr* TypeAryPtr::with_field_offset(int offset) const {
 }
 
 const TypePtr* TypeAryPtr::add_field_offset_and_offset(intptr_t offset) const {
+  if (!is_flat() || !klass_is_exact() || offset == OffsetBot || offset == OffsetTop) {
+    return add_offset(offset);
+  }
+
+  // Handle flat concrete value class array with known 'offset' which could refer to an actual field in the flat storage.
   int adj = 0;
-  if (is_flat() && klass_is_exact() && offset != Type::OffsetBot && offset != Type::OffsetTop) {
-    if (_offset.get() != OffsetBot && _offset.get() != OffsetTop) {
-      adj = _offset.get();
-      offset += _offset.get();
+  if (_offset != Offset::bottom && _offset != Offset::top) {
+    adj = _offset.get();
+    offset += _offset.get();
+  }
+  uint header = arrayOopDesc::base_offset_in_bytes(T_FLAT_ELEMENT);
+  if (_field_offset != Offset::bottom && _field_offset != Offset::top) {
+    offset += _field_offset.get();
+    if (_offset == Offset::bottom || _offset == Offset::top) {
+      offset += header;
     }
-    uint header = arrayOopDesc::base_offset_in_bytes(T_FLAT_ELEMENT);
-    if (_field_offset.get() != OffsetBot && _field_offset.get() != OffsetTop) {
-      offset += _field_offset.get();
-      if (_offset.get() == OffsetBot || _offset.get() == OffsetTop) {
-        offset += header;
-      }
-    }
-    if (elem()->make_oopptr()->is_inlinetypeptr() && (offset >= (intptr_t)header || offset < 0)) {
-      // Try to get the field of the inline type array element we are pointing to
-      ciInlineKlass* vk = elem()->inline_klass();
-      int shift = flat_log_elem_size();
-      int mask = (1 << shift) - 1;
-      intptr_t field_offset = ((offset - header) & mask);
-      ciField* field = vk->get_field_by_offset(field_offset + vk->payload_offset(), false);
-      if (field != nullptr || field_offset == vk->null_marker_offset_in_payload()) {
-        return with_field_offset(field_offset)->add_offset(offset - field_offset - adj);
-      }
+  }
+  if (elem()->make_oopptr()->is_inlinetypeptr() && (offset >= (intptr_t)header || offset < 0)) {
+    // Try to get the field of the inline type array element we are pointing to
+    ciInlineKlass* vk = elem()->inline_klass();
+    int shift = flat_log_elem_size();
+    int mask = (1 << shift) - 1;
+    int field_offset = static_cast<int>((offset - header) & mask);
+    ciField* field = vk->get_field_by_offset(field_offset + vk->payload_offset(), false);
+    if (field != nullptr || field_offset == vk->null_marker_offset_in_payload()) {
+      return with_field_offset(field_offset)->add_offset(offset - field_offset - adj);
     }
   }
   return add_offset(offset - adj);
@@ -5811,7 +5795,7 @@ const TypePtr* TypeAryPtr::add_field_offset_and_offset(intptr_t offset) const {
 // Return offset incremented by field_offset for flat inline type arrays
 int TypeAryPtr::flat_offset() const {
   int offset = _offset.get();
-  if (offset != Type::OffsetBot && offset != Type::OffsetTop &&
+  if (offset != OffsetBot && offset != OffsetTop &&
       _field_offset != Offset::bottom && _field_offset != Offset::top) {
     offset += _field_offset.get();
   }
@@ -6151,7 +6135,7 @@ void TypeMetadataPtr::dump2( Dict &d, uint depth, outputStream *st ) const {
 const TypeMetadataPtr *TypeMetadataPtr::BOTTOM;
 
 TypeMetadataPtr::TypeMetadataPtr(PTR ptr, ciMetadata* metadata, Offset offset):
-  TypePtr(MetadataPtr, ptr, offset), _metadata(metadata) {
+  TypePtr(MetadataPtr, ptr, offset, relocInfo::metadata_type), _metadata(metadata) {
 }
 
 const TypeMetadataPtr* TypeMetadataPtr::make(ciMethod* m) {
@@ -6200,7 +6184,7 @@ const TypeKlassPtr* TypeKlassPtr::make(ciKlass* klass, InterfaceHandling interfa
 }
 
 TypeKlassPtr::TypeKlassPtr(TYPES t, PTR ptr, ciKlass* klass, const TypeInterfaces* interfaces, Offset offset)
-  : TypePtr(t, ptr, offset), _klass(klass), _interfaces(interfaces) {
+  : TypePtr(t, ptr, offset, relocInfo::metadata_type), _klass(klass), _interfaces(interfaces) {
   assert(klass == nullptr || !klass->is_loaded() || (klass->is_instance_klass() && !klass->is_interface()) ||
          klass->is_type_array_klass() || klass->is_flat_array_klass() || !klass->as_obj_array_klass()->base_element_klass()->is_interface(), "no interface here");
 }
@@ -7106,7 +7090,7 @@ const Type    *TypeAryKlassPtr::xmeet( const Type *t ) const {
         ptr = NotNull;
       interfaces = this_interfaces->intersection_with(tp_interfaces);
       FlatInArray flat_in_array = meet_flat_in_array(NotFlat, tp->flat_in_array());
-      return TypeInstKlassPtr::make(ptr, ciEnv::current()->Object_klass(), interfaces, offset, tp->flat_in_array());
+      return TypeInstKlassPtr::make(ptr, ciEnv::current()->Object_klass(), interfaces, offset, flat_in_array);
     }
     default: typerr(t);
     }
@@ -7309,8 +7293,9 @@ const Type* TypeAryKlassPtr::base_element_type(int& dims) const {
 
 //------------------------------make-------------------------------------------
 const TypeFunc *TypeFunc::make(const TypeTuple *domain_sig, const TypeTuple* domain_cc,
-                               const TypeTuple *range_sig, const TypeTuple *range_cc) {
-  return (TypeFunc*)(new TypeFunc(domain_sig, domain_cc, range_sig, range_cc))->hashcons();
+                               const TypeTuple* range_sig, const TypeTuple* range_cc,
+                               bool scalarized_return) {
+  return (TypeFunc*)(new TypeFunc(domain_sig, domain_cc, range_sig, range_cc, scalarized_return))->hashcons();
 }
 
 const TypeFunc *TypeFunc::make(const TypeTuple *domain, const TypeTuple *range) {
@@ -7324,14 +7309,16 @@ const TypeTuple* osr_domain() {
   return TypeTuple::make(TypeFunc::Parms+1, fields);
 }
 
-//------------------------------make-------------------------------------------
-const TypeFunc* TypeFunc::make(ciMethod* method, bool is_osr_compilation) {
+// Build a TypeFunc with both the Java-signature view ('sig') and the actual calling-
+// convention view ('cc') of inline types. In the signature, an inline type is a single
+// oop slot. In the scalarized calling convention, it is expanded to its field
+// values (plus null marker and optional oop to the heap buffer).
+// The 'is_call' argument distinguishes between the return signature of a method at calls
+// vs. at compilation of that method because at calls we return an additional null marker field.
+// For OSR and mismatching calls, we fall back to the non-scalarized argument view.
+const TypeFunc* TypeFunc::make(ciMethod* method, bool is_call, bool is_osr_compilation) {
   Compile* C = Compile::current();
   const TypeFunc* tf = nullptr;
-  if (!is_osr_compilation) {
-    tf = C->last_tf(method); // check cache
-    if (tf != nullptr)  return tf;  // The hit rate here is almost 50%.
-  }
   // Inline types are not passed/returned by reference, instead each field of
   // the inline type is passed/returned as an argument. We maintain two views of
   // the argument/return list here: one based on the signature (with an inline
@@ -7339,17 +7326,22 @@ const TypeFunc* TypeFunc::make(ciMethod* method, bool is_osr_compilation) {
   // convention (with an inline type argument/return as a list of its fields).
   bool has_scalar_args = method->has_scalarized_args() && !is_osr_compilation;
   // Fall back to the non-scalarized calling convention when compiling a call via a mismatching method
-  if (method != C->method() && method->mismatch()) {
+  if (is_call && method->mismatch()) {
     has_scalar_args = false;
+  }
+  ciSignature* sig = method->signature();
+  bool has_scalar_ret = !method->is_native() && sig->return_type()->is_inlinetype() && sig->return_type()->as_inline_klass()->can_be_returned_as_fields();
+  // Don't cache on scalarized return because the range depends on 'is_call'
+  if (!is_osr_compilation && !has_scalar_ret) {
+    tf = C->last_tf(method); // check cache
+    if (tf != nullptr)  return tf;  // The hit rate here is almost 50%.
   }
   const TypeTuple* domain_sig = is_osr_compilation ? osr_domain() : TypeTuple::make_domain(method, ignore_interfaces, false);
   const TypeTuple* domain_cc = has_scalar_args ? TypeTuple::make_domain(method, ignore_interfaces, true) : domain_sig;
-  ciSignature* sig = method->signature();
-  bool has_scalar_ret = !method->is_native() && sig->return_type()->is_inlinetype() && sig->return_type()->as_inline_klass()->can_be_returned_as_fields();
-  const TypeTuple* range_sig = TypeTuple::make_range(sig, ignore_interfaces, false);
-  const TypeTuple* range_cc = has_scalar_ret ? TypeTuple::make_range(sig, ignore_interfaces, true) : range_sig;
-  tf = TypeFunc::make(domain_sig, domain_cc, range_sig, range_cc);
-  if (!is_osr_compilation) {
+  const TypeTuple* range_sig = TypeTuple::make_range(sig, ignore_interfaces);
+  const TypeTuple* range_cc = has_scalar_ret ? TypeTuple::make_range(sig, ignore_interfaces, true, is_call) : range_sig;
+  tf = TypeFunc::make(domain_sig, domain_cc, range_sig, range_cc, has_scalar_ret);
+  if (!is_osr_compilation && !has_scalar_ret) {
     C->set_last_tf(method, tf);  // fill cache
   }
   return tf;
@@ -7389,13 +7381,14 @@ bool TypeFunc::eq( const Type *t ) const {
   return _domain_sig == a->_domain_sig &&
     _domain_cc == a->_domain_cc &&
     _range_sig == a->_range_sig &&
-    _range_cc == a->_range_cc;
+    _range_cc == a->_range_cc &&
+    _scalarized_return == a->_scalarized_return;
 }
 
 //------------------------------hash-------------------------------------------
 // Type-specific hashing function.
 uint TypeFunc::hash(void) const {
-  return (uint)(intptr_t)_domain_sig + (uint)(intptr_t)_domain_cc + (uint)(intptr_t)_range_sig + (uint)(intptr_t)_range_cc;
+  return (uint)(intptr_t)_domain_sig + (uint)(intptr_t)_domain_cc + (uint)(intptr_t)_range_sig + (uint)(intptr_t)_range_cc + (uint)(intptr_t)_scalarized_return;
 }
 
 //------------------------------dump2------------------------------------------

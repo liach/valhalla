@@ -135,9 +135,7 @@ void Parse::do_get_xxx(Node* obj, ciField* field) {
     InlineTypeNode* vt = obj->as_InlineType();
     Node* value = vt->field_value_by_offset(field->offset_in_bytes(), false);
     const Type* value_type = _gvn.type(value);
-    if (value->is_InlineType()) {
-      value = value->as_InlineType()->adjust_scalarization_depth(this);
-    } else if (value_type->is_inlinetypeptr()) {
+    if (value_type->is_inlinetypeptr()) {
       value = InlineTypeNode::make_from_oop(this, value, value_type->inline_klass());
     }
     pop();
@@ -340,8 +338,8 @@ void Parse::do_put_xxx(Node* obj, ciField* field, bool is_field) {
     // can insert a memory barrier later on to keep the writes from floating
     // out of the constructor.
     if (field->is_final() || field->is_stable()) {
-      if (field->is_final()) {
-        set_wrote_final(true);
+      if (field->is_final() && !field->is_strict()) {
+        set_wrote_non_strict_final(true);
       }
       if (field->is_stable()) {
         set_wrote_stable(true);

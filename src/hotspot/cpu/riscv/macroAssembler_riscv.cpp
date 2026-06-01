@@ -4117,7 +4117,7 @@ void MacroAssembler::membar(uint32_t order_constraint) {
   }
 
   address prev = pc() - MacroAssembler::instruction_size;
-  address last = code()->last_insn();
+  address last = code()->last_merge_candidate();
 
   if (last != nullptr && is_membar(last) && prev == last) {
     // We are merging two memory barrier instructions.  On RISCV we
@@ -4127,7 +4127,7 @@ void MacroAssembler::membar(uint32_t order_constraint) {
     return;
   }
 
-  code()->set_last_insn(pc());
+  code()->set_last_merge_candidate(pc());
   uint32_t predecessor = 0;
   uint32_t successor = 0;
   membar_mask_to_pred_succ(order_constraint, predecessor, successor);
@@ -6985,4 +6985,33 @@ void MacroAssembler::fast_unlock(Register obj, Register tmp1, Register tmp2, Reg
   j(slow);
 
   bind(unlocked);
+}
+
+// Unimplemented methods for inline types.
+int MacroAssembler::store_inline_type_fields_to_buf(ciInlineKlass* vk, bool from_interpreter) {
+   Unimplemented();
+}
+
+bool MacroAssembler::move_helper(VMReg from, VMReg to, BasicType bt, RegState reg_state[]) {
+  Unimplemented();
+}
+
+bool MacroAssembler::unpack_inline_helper(const GrowableArray<SigEntry>* sig, int& sig_index,
+                            VMReg from, int& from_index, VMRegPair* to, int to_count, int& to_index,
+                            RegState reg_state[]) {
+  Unimplemented();
+}
+
+bool MacroAssembler::pack_inline_helper(const GrowableArray<SigEntry>* sig, int& sig_index, int vtarg_index,
+                          VMRegPair* from, int from_count, int& from_index, VMReg to,
+                          RegState reg_state[], Register val_array) {
+  Unimplemented();
+}
+
+int MacroAssembler::extend_stack_for_inline_args(int args_on_stack) {
+  Unimplemented();
+}
+
+VMReg MacroAssembler::spill_reg_for(VMReg reg) {
+  Unimplemented();
 }

@@ -33,6 +33,10 @@
 #include "oops/compressedOops.hpp"
 #include "utilities/powerOfTwo.hpp"
 
+class ciInlineKlass;
+class SigEntry;
+class VMRegPair;
+
 // MacroAssembler extends Assembler by frequently used macros.
 //
 // Instructions for which a 'better' code sequence exists depending
@@ -876,7 +880,7 @@ public:
   void bind(Label& L) {
     Assembler::bind(L);
     // fences across basic blocks should not be merged
-    code()->clear_last_insn();
+    code()->clear_last_merge_candidate();
   }
 
   typedef void (MacroAssembler::* compare_and_branch_insn)(Register Rs1, Register Rs2, const address dest);
@@ -1808,6 +1812,10 @@ public:
   }
   static uint32_t get_membar_kind(address addr);
   static void set_membar_kind(address addr, uint32_t order_kind);
+
+ public:
+  // Inline type specific methods
+  #include "asm/macroAssembler_common.hpp"
 };
 
 #ifdef ASSERT

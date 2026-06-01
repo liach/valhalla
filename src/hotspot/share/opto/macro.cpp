@@ -323,7 +323,12 @@ Node* PhaseMacroExpand::make_arraycopy_load(ArrayCopyNode* ac, intptr_t offset, 
   if (ac->is_clonebasic()) {
     assert(ac->in(ArrayCopyNode::Src) != ac->in(ArrayCopyNode::Dest), "clone source equals destination");
     adr = _igvn.transform(AddPNode::make_with_base(base, _igvn.MakeConX(offset)));
-    adr_type = _igvn.type(base)->is_ptr()->add_offset(offset);
+    adr_type = _igvn.type(base)->is_ptr();
+    if (adr_type->isa_aryptr()) {
+      adr_type = adr_type->is_aryptr()->add_field_offset_and_offset(offset);
+    } else {
+      adr_type = adr_type->add_offset(offset);
+    }
   } else {
     if (!ac->modifies(offset, offset, &_igvn, true)) {
       // If the arraycopy does not copy to this offset, we cannot generate a rematerialization load for it.
@@ -754,7 +759,7 @@ Node* PhaseMacroExpand::inline_type_from_mem(ciInlineKlass* vk, const TypeAryPtr
 }
 
 // Check the possibility of scalar replacement.
-bool PhaseMacroExpand::can_eliminate_allocation(PhaseIterGVN* igvn, AllocateNode *alloc, GrowableArray <SafePointNode *>* safepoints) {
+bool PhaseMacroExpand::can_eliminate_allocation(PhaseIterGVN* igvn, AllocateNode* alloc, Unique_Node_List* safepoints) {
   //  Scan the uses of the allocation to check for anything that would
   //  prevent us from eliminating it.
   NOT_PRODUCT( const char* fail_eliminate = nullptr; )
@@ -845,7 +850,7 @@ bool PhaseMacroExpand::can_eliminate_allocation(PhaseIterGVN* igvn, AllocateNode
           can_eliminate = false;
         } else if (!reduce_merge_precheck) {
           assert(!res->is_Phi() || !res->as_Phi()->can_be_inline_type(), "Inline type allocations should not have safepoint uses");
-          safepoints->append_if_missing(sfpt);
+          safepoints->push(sfpt);
         }
       } else if (use->is_InlineType() && use->as_InlineType()->get_oop() == res) {
         // Look at uses
@@ -930,7 +935,7 @@ bool PhaseMacroExpand::can_eliminate_allocation(PhaseIterGVN* igvn, AllocateNode
   return can_eliminate;
 }
 
-void PhaseMacroExpand::undo_previous_scalarizations(GrowableArray <SafePointNode *> safepoints_done, AllocateNode* alloc) {
+void PhaseMacroExpand::undo_previous_scalarizations(Unique_Node_List& safepoints_done, AllocateNode* alloc) {
   Node* res = alloc->result_cast();
   int nfields = 0;
   assert(res == nullptr || res->is_CheckCastPP(), "unexpected AllocateNode result");
@@ -950,8 +955,8 @@ void PhaseMacroExpand::undo_previous_scalarizations(GrowableArray <SafePointNode
   }
 
   // rollback processed safepoints
-  while (safepoints_done.length() > 0) {
-    SafePointNode* sfpt_done = safepoints_done.pop();
+  while (safepoints_done.size() > 0) {
+    SafePointNode* sfpt_done = safepoints_done.pop()->as_SafePoint();
 
     SafePointNode::NodeEdgeTempStorage non_debug_edges_worklist(igvn());
 
@@ -1238,8 +1243,8 @@ SafePointScalarObjectNode* PhaseMacroExpand::create_scalarized_object_descriptio
 }
 
 // Do scalar replacement.
-bool PhaseMacroExpand::scalar_replacement(AllocateNode* alloc, GrowableArray<SafePointNode*>& safepoints) {
-  GrowableArray<SafePointNode*> safepoints_done;
+bool PhaseMacroExpand::scalar_replacement(AllocateNode* alloc, Unique_Node_List& safepoints) {
+  Unique_Node_List safepoints_done;
   Node* res = alloc->result_cast();
   assert(res == nullptr || res->is_CheckCastPP(), "unexpected AllocateNode result");
   const TypeOopPtr* res_type = nullptr;
@@ -1249,10 +1254,10 @@ bool PhaseMacroExpand::scalar_replacement(AllocateNode* alloc, GrowableArray<Saf
 
   // Process the safepoint uses
   Unique_Node_List value_worklist;
-  while (safepoints.length() > 0) {
-    SafePointNode* sfpt = safepoints.pop();
+  while (safepoints.size() > 0) {
+    SafePointNode* sfpt = safepoints.pop()->as_SafePoint();
 
-  SafePointNode::NodeEdgeTempStorage non_debug_edges_worklist(igvn());
+    SafePointNode::NodeEdgeTempStorage non_debug_edges_worklist(igvn());
 
     // All sfpt inputs are implicitly included into debug info during the scalarization process below.
     // Keep non-debug inputs separately, so they stay non-debug.
@@ -1275,7 +1280,7 @@ bool PhaseMacroExpand::scalar_replacement(AllocateNode* alloc, GrowableArray<Saf
     _igvn._worklist.push(sfpt);
 
     // keep it for rollback
-    safepoints_done.append_if_missing(sfpt);
+    safepoints_done.push(sfpt);
   }
   // Scalarize inline types that were added to the safepoint.
   // Don't allow linking a constant oop (if available) for flat array elements
@@ -1507,7 +1512,7 @@ bool PhaseMacroExpand::eliminate_allocate_node(AllocateNode *alloc) {
 
   _callprojs = alloc->extract_projections(false /*separate_io_proj*/, false /*do_asserts*/);
 
-  GrowableArray <SafePointNode *> safepoints;
+  Unique_Node_List safepoints;
   if (!can_eliminate_allocation(&_igvn, alloc, &safepoints)) {
     return false;
   }
@@ -1517,7 +1522,7 @@ bool PhaseMacroExpand::eliminate_allocate_node(AllocateNode *alloc) {
     // We can only eliminate allocation if all debug info references
     // are already replaced with SafePointScalarObject because
     // we can't search for a fields value without instance_id.
-    if (safepoints.length() > 0) {
+    if (safepoints.size() > 0) {
       return false;
     }
   }
@@ -2791,7 +2796,7 @@ void PhaseMacroExpand::expand_mh_intrinsic_return(CallStaticJavaNode* call) {
   }
   const TypeFunc* tf = call->_tf;
   const TypeTuple* domain = OptoRuntime::store_inline_type_fields_Type()->domain_cc();
-  const TypeFunc* new_tf = TypeFunc::make(tf->domain_sig(), tf->domain_cc(), tf->range_sig(), domain);
+  const TypeFunc* new_tf = TypeFunc::make(tf->domain_sig(), tf->domain_cc(), tf->range_sig(), domain, true);
   call->_tf = new_tf;
   // Make sure the change of type is applied before projections are processed by igvn
   _igvn.set_type(call, call->Value(&_igvn));

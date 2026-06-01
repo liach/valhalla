@@ -664,6 +664,15 @@ bool ciMethod::parameter_profiled_type(int i, ciKlass*& type, ProfilePtrKind& pt
   return false;
 }
 
+// MDO updates are racy. C2 can observe the array type before the profiling code has updated the
+// corresponding flat/null-free flags. If the array type is known, prefer the properties it provides.
+static void update_flags_from_type(ciKlass* array_type, bool& flat_array, bool& null_free_array) {
+  if (array_type != nullptr) {
+    flat_array |= array_type->is_flat_array_klass();
+    null_free_array |= array_type->as_array_klass()->is_elem_null_free();
+  }
+}
+
 bool ciMethod::array_access_profiled_type(int bci, ciKlass*& array_type, ciKlass*& element_type, ProfilePtrKind& element_ptr, bool &flat_array, bool &null_free_array) {
   if (method_data() != nullptr && method_data()->is_mature()) {
     ciProfileData* data = method_data()->bci_to_data(bci);
@@ -675,20 +684,14 @@ bool ciMethod::array_access_profiled_type(int bci, ciKlass*& array_type, ciKlass
         element_ptr = array_access->element()->ptr_kind();
         flat_array = array_access->flat_array();
         null_free_array = array_access->null_free_array();
-#ifdef ASSERT
-        if (array_type != nullptr) {
-          bool flat = array_type->is_flat_array_klass();
-          bool null_free = array_type->as_array_klass()->is_elem_null_free();
-          assert(!flat || flat_array, "inconsistency");
-          assert(!null_free || null_free_array, "inconsistency");
-        }
-#endif
+        update_flags_from_type(array_type, flat_array, null_free_array);
         return true;
       } else if (data->is_ArrayStoreData()) {
         ciArrayStoreData* array_access = (ciArrayStoreData*) data->as_ArrayStoreData();
         array_type = array_access->array()->valid_type();
         flat_array = array_access->flat_array();
         null_free_array = array_access->null_free_array();
+        update_flags_from_type(array_type, flat_array, null_free_array);
         ciCallProfile call_profile = call_profile_at_bci(bci);
         if (call_profile.morphism() == 1) {
           element_type = call_profile.receiver(0);
@@ -702,14 +705,6 @@ bool ciMethod::array_access_profiled_type(int bci, ciKlass*& array_type, ciKlass
         } else {
           element_ptr = ProfileMaybeNull;
         }
-#ifdef ASSERT
-        if (array_type != nullptr) {
-          bool flat = array_type->is_flat_array_klass();
-          bool null_free = array_type->as_array_klass()->is_elem_null_free();
-          assert(!flat || flat_array, "inconsistency");
-          assert(!null_free || null_free_array, "inconsistency");
-        }
-#endif
         return true;
       }
     }
@@ -1616,8 +1611,7 @@ bool ciMethod::is_scalarized_buffer_arg(int idx) const {
 }
 
 bool ciMethod::has_scalarized_args() const {
-  VM_ENTRY_MARK;
-  return get_Method()->has_scalarized_args();
+  GUARDED_VM_ENTRY(return get_Method()->has_scalarized_args();)
 }
 
 const GrowableArray<SigEntry>* ciMethod::get_sig_cc() const {
@@ -1631,6 +1625,14 @@ const GrowableArray<SigEntry>* ciMethod::get_sig_cc() const {
 bool ciMethod::mismatch() const {
   VM_ENTRY_MARK;
   return get_Method()->mismatch();
+}
+
+bool ciMethod::c1_needs_stack_repair() const {
+  GUARDED_VM_ENTRY(return get_Method()->c1_needs_stack_repair();)
+}
+
+bool ciMethod::c2_needs_stack_repair() const {
+  GUARDED_VM_ENTRY(return get_Method()->c2_needs_stack_repair();)
 }
 
 // ciMethod::is_old
